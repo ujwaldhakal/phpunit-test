@@ -15,7 +15,7 @@ class Inventory extends Model
      * @var array
      */
     protected $fillable = [
-        'name',
+        'name','price',
     ];
 
     /**

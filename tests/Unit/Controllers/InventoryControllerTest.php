@@ -2,6 +2,8 @@
 
 namespace Tests\Unit\Controllers;
 
+use Event;
+use App\Events\NotifyAdmin;
 use App\Http\Controllers\InventoryController;
 use App\Inventory;
 use Illuminate\Http\Request;
@@ -31,23 +33,27 @@ class InventoryControllerTest extends \Tests\TestCase
 
     public function testIfCreateIsWorkingWhenDetailsAreCorrect()
     {
-        $this->request->shouldReceive('all')->andReturn(['name' => 'desk']);
-        $this->inventory->shouldReceive('create')->andReturn(true);g
-        $this->makePropertyAccessible($this->inventoryController,'inventory',$this->inventory,InventoryController::class);
-        $this->makePropertyAccessible($this->inventoryController,'request',$this->request,InventoryController::class);
-        $reponse = json_decode($this->inventoryController->create()->getContent(),true);
-        $this->assertSame($reponse,['status' => 'success']);
-    }
-
-
-    public function testIfCreateIsWorkingWhenDetailsAreNotCorrect()
-    {
-        $this->request->shouldReceive('all')->andReturn();
+        Event::fake();
+        $this->request->shouldReceive('all')->andReturn(['name' => 'desk','price' => 2]);
         $this->inventory->shouldReceive('create')->andReturn(true);
-        $this->makePropertyAccessible($this->inventoryController,'inventory',$this->inventory,InventoryController::class);
-        $this->makePropertyAccessible($this->inventoryController,'request',$this->request,InventoryController::class);
-        $reponse = json_decode($this->inventoryController->create()->getContent(),true);
-        $this->assertSame($reponse,['status' => 'error']);
+        $this->makePropertyAccessible($this->inventoryController, 'inventory', $this->inventory, InventoryController::class);
+        $this->makePropertyAccessible($this->inventoryController, 'request', $this->request, InventoryController::class);
+        $reponse = json_decode($this->inventoryController->create()->getContent(), true);
+        Event::assertDispatched(NotifyAdmin::class);
+        $this->assertSame($reponse, ['status' => 'success','message' => 'item has been successfully added']);
     }
+
+    public function testIfCreateIsWorkingWhenDetailsAreIncorrect()
+    {
+        Event::fake();
+        $this->request->shouldReceive('all')->andReturn(['name' => 'desk']);
+        $this->inventory->shouldReceive('create')->andReturn(true);
+        $this->makePropertyAccessible($this->inventoryController, 'inventory', $this->inventory, InventoryController::class);
+        $this->makePropertyAccessible($this->inventoryController, 'request', $this->request, InventoryController::class);
+        $reponse = json_decode($this->inventoryController->create()->getContent(), true);
+        Event::assertNotDispatched(NotifyAdmin::class);
+        $this->assertSame($reponse, ['status' => 'error','message' => 'item name or price is missing']);
+    }
+
 
 }
